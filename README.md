@@ -1,6 +1,6 @@
-# Automated Examination System
+# Automated Examination Processing System
 
-The Automated Examination System is an application designed to streamline the exam processing workflow for university lecturers. With the growing number of students and the need for accuracy and transparency in exam evaluation, this system provides an efficient solution for lecturers to submit individual scoresheets and generate consolidated scoresheets and PDF summaries for a semester's exams.
+The Automated Examination Processing System is an application designed to streamline the exam processing workflow for university lecturers. With the growing number of students and the need for accuracy and transparency in exam evaluation, this system provides an efficient solution for lecturers to submit individual scoresheets and generate consolidated scoresheets and PDF summaries for a semester's exams.
 
 ## Planned Key Features
 
