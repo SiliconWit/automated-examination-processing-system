@@ -19,3 +19,17 @@ The Automated Examination Processing System is an application designed to stream
 - **Transparency:** Provides transparency in exam processing, reducing errors and enhancing accountability.
 
 This Automated Examination System is designed to empower lecturers with a streamlined solution for managing student scores and generating comprehensive reports. Enhance academic efficiency and provide lecturers with a powerful tool that simplifies score management and reporting tasks. Contribute to the repository and help improve examination processes.
+
+## The Project Organization
+
+project_folder/
+├── config.toml                 # Configuration file
+├── data/                       # Folder for input/output data
+├── modules/
+│   ├── __init__.py             # Can be an empty __init__ file to mark it as a package
+│   ├── file_processing.py      # File processing functions
+│   ├── data_consolidation.py   # Data consolidation functions
+│   ├── utilities.py            # Shared utilities and constants
+│   └── rule_engine.py          # Rules that generate recommendations 
+└── main.py                     # Main script to run the project
+

@@ -2,26 +2,58 @@ import os
 import re
 import pandas as pd
 import numpy as np
+import toml
 
-def consolidate_mark_sheet(input_folder, output_file):
-    # Get a list of all Excel files in the input folder
+def fetch_center_names(input_folder):
     excel_files = [file for file in os.listdir(input_folder) if file.endswith('.xlsx')]
+    center_names = set()
 
-    # Create an empty DataFrame to store consolidated data
-    consolidated_df = pd.DataFrame(columns=['Ser. No.', 'Reg. No.', 'Name', 'EMT 4101', 'EMT 4102', 'EMT 4103',
-                                           'EMT 4104', 'EMT 4105', 'SMA 2272', 'EMT 4201',
-                                           'EMT 4202', 'EMT 4203', 'EMT 4204', 'EMT 4205',
-                                           'SMA 3261', 'TU', 'Total', 'Mean', 'Recommendation'])
+    for excel_file in excel_files:
+        center_name = re.match(r'^([A-Z]+\s\d+)', excel_file)  # Extract the center name from the file name
+        if center_name:
+            center_names.add(center_name.group(1))
+
+    return center_names
+
+def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
+    # Get a list of all Excel files in the input folder
+
+    excel_files = [file for file in os.listdir(input_folder_path) if file.endswith('.xlsx')]
+
+    center_names = fetch_center_names(input_folder_path)
+
+    # Load the configuration from the TOML file
+    config = toml.load(config_path)
+
+    # Get the column order from the configuration
+    desired_columns = config["column_order"]["columns"]
+    additional_columns = config["additional_columns"]["columns"]
+
+    # Generate the center names dynamically
+    center_names = fetch_center_names(config["input_folder"]["path"])
+    center_columns = list(center_names)
+
+    # Combine all columns: desired columns, dynamic center columns, additional columns
+    new_column_order = desired_columns + center_columns + additional_columns
+
+    # Create an empty DataFrame using the generated column list
+    consolidated_df = pd.DataFrame(columns=new_column_order)
 
     # List to track files without "REG. NO." cell
     files_without_reg_no = []
 
+    # Load the course patterns from the configuration
+    course_patterns = config["course_patterns"]
+
     # List to store collected data
     collected_data = []
 
+    # Dictionary to track courses found in each Excel file
+    course_files = {}
+
     # Loop through each Excel file and consolidate the data
     for excel_file in excel_files:
-        file_path = os.path.join(input_folder, excel_file)
+        file_path = os.path.join(input_folder_path, excel_file)
         df = pd.read_excel(file_path, header=None)  # Read without header
 
         # Search for the cell containing 'REG. NO.'
@@ -49,24 +81,40 @@ def consolidate_mark_sheet(input_folder, output_file):
                 name_value = df.iloc[row_idx, reg_no_col + 1]
                 if isinstance(reg_no_value, str):
                     reg_no_value = reg_no_value.strip()  # Strip whitespace from value
-                    if re.match(r'^E022-01-\d+/\d{4}$', reg_no_value):
-                        data.append((reg_no_value, name_value))  # Collect corresponding data
+
+                    # Check the course pattern for each course
+                    matching_course = None
+                    for course, pattern in course_patterns.items():
+                        if re.match(pattern, reg_no_value):
+                            matching_course = course
+                            break
+
+                    if matching_course:
+                        data.append((reg_no_value, name_value, matching_course))
                     else:
-                        print(f"Anomaly in file '{excel_file}': Reg. No. value '{reg_no_value}' does not match the expected format")
+                        print(f"Anomaly in file '{excel_file}': Reg. No. value '{reg_no_value}' does not match any of the expected course patterns")
+
 
             # Add the collected data to the list, eliminating duplicates
-            for reg_no, name in data:
+            for reg_no, name, course in data:
                 if (reg_no, name) not in collected_data:
-                    collected_data.append((reg_no, name))
+                    collected_data.append((reg_no, name, course))
+            # Store courses found in the current file
+            course_files[excel_file] = set(course for _, _, course in data)
         else:
             files_without_reg_no.append(excel_file)
+        # Check for mixed courses in each Excel file
+        for excel_file, courses in course_files.items():
+            if len(courses) > 1:
+                print(f"Warning: Excel file '{excel_file}' contains data from multiple courses: {', '.join(courses)}.")
+
 
     # Remove empty values from the collected data
-    collected_data = [(reg_no, name) for reg_no, name in collected_data if reg_no and isinstance(name, str)]
+    collected_data = [(reg_no, name, course) for reg_no, name, course in collected_data if reg_no and isinstance(name, str)]
 
     # Group collected data by Reg. No.
     grouped_data = {}
-    for reg_no, name in collected_data:
+    for reg_no, name, course in collected_data:
         if reg_no in grouped_data:
             grouped_data[reg_no].add(name)
         else:
@@ -94,15 +142,12 @@ def consolidate_mark_sheet(input_folder, output_file):
     # Add 'Ser. No.' column with a count
     consolidated_data_df['Ser. No.'] = range(1, len(consolidated_data_df) + 1)
 
-    # Create a new column order that includes the columns in consolidated_data_df
-    new_column_order = ['Ser. No.', 'Reg. No.', 'Name'] + list(consolidated_data_df.columns[3:])
-
-    # Reorder the columns in the DataFrame
-    consolidated_data_df = consolidated_data_df[new_column_order]
+    # Reorder the columns in the DataFrame using the reindex method
+    consolidated_data_df = consolidated_data_df.reindex(columns=new_column_order)
 
     # Create a new Excel file and save the consolidated data
-    consolidated_data_df.to_excel(output_file, index=False)
-    print(f"Consolidated mark sheet saved as '{output_file}'.")
+    consolidated_data_df.to_excel(output_excel_path, index=False)
+    print(f"Consolidated mark sheet saved as '{output_excel_path}'.")
 
     # Print files without "REG. NO." cell
     if files_without_reg_no:
@@ -124,11 +169,13 @@ def sort_key(reg_no):
     return (year_number, student_number, course_number, reg_no)
 
 if __name__ == "__main__":
-    # Specify the input folder containing individual sheets and the output Excel file
-    input_folder = "../../individual_sheets"
-    output_excel_file = "../../EMT4_2_2023.xlsx"
+    config_path = "config.toml"  # Specify the path to your TOML configuration file
 
-    # Consolidate the mark sheet and save as a new Excel file
-    consolidate_mark_sheet(input_folder, output_excel_file)
+    # Load paths from configuration
+    config = toml.load(config_path)
+    input_folder_path = config["input_folder"]["path"]
+    output_excel_path = config["output_excel"]["path"]
 
-    print(f"Mark sheet consolidated and saved as '{output_excel_file}'.")
+    consolidate_mark_sheet(input_folder_path, output_excel_path, config_path)
+
+    print(f"Mark sheet consolidated and saved as '{output_excel_path}'.")
