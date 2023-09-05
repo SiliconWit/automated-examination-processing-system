@@ -27,3 +27,4 @@ def sort_key(reg_no):
     
     # Return a tuple of values that determine the sorting order
     return (year_number, student_number, course_number, reg_no)
+

@@ -2,7 +2,8 @@ import os
 import toml
 from modules.file_processing import *
 from modules.data_consolidation import *
-# from modules.utilities import *
+from modules.utilities import *
+# from modules.utilities import course_code
 
 if __name__ == "__main__":
 

@@ -1,3 +1,9 @@
+# Add various configurations 
+
+# Must Have Key Words:
+# 'REG. NO.', 'INTERNAL EXAMINER MARKS /100'
+# Input xlsx files must be named only as unit/subject code e.g. "EMT 4101.xlsx".
+
 [column_order]
 columns = ["Ser. No.", "Reg. No.", "Name"] # DO NOT change this
 
@@ -14,3 +20,7 @@ path = "../EMT4_2_2023.xlsx"
 E022 = "^E022-01-\\d+/\\d{4}$" # Mechatronic Engineering 
 E023 = "^E023-\\d+-\\d+/\\d{4}$"
 # Add more patterns for other courses if needed
+
+[semester_order]
+semester_4_1 = ["EMT 4101", "EMT 4102", "EMT 4103", "EMT 4104", "EMT 4105", "SMA 2272"]
+semester_4_2 = ["EMT 4201", "EMT 4202", "EMT 4203", "EMT 4204", "EMT 4205", "SMA 3261"]
