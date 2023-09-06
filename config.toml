@@ -8,7 +8,7 @@
 columns = ["Ser. No.", "Reg. No.", "Name"] # DO NOT change this
 
 [additional_columns]
-columns = ["TU", "Total", "Mean", "Recommendation"]
+columns = ["TU", "Total", "Mean", "Grade", "Recommendation"]
 
 [input_folder]
 path = "../individual_sheets"
@@ -24,3 +24,5 @@ E023 = "^E023-\\d+-\\d+/\\d{4}$"
 [semester_order]
 semester_4_1 = ["EMT 4101", "EMT 4102", "EMT 4103", "EMT 4104", "EMT 4105", "SMA 2272"]
 semester_4_2 = ["EMT 4201", "EMT 4202", "EMT 4203", "EMT 4204", "EMT 4205", "SMA 3261"]
+
+

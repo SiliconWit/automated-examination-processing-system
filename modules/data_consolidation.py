@@ -3,9 +3,11 @@ import pandas as pd
 from .file_processing import *
 from .utilities import *
 from collections import Counter
+from .rule_engine import *
 
 from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import PatternFill
 
 config_path = "config.toml"  # Specify the path to your TOML configuration file
 # Load the configuration from the TOML file
@@ -29,15 +31,8 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
     # Combine all columns: desired columns, dynamic center columns, additional columns
     new_column_order = desired_columns + center_columns + additional_columns
 
-    # global collected_data  # Use the global collected_data list
-    # global consolidated_df
     # Create an empty DataFrame using the generated column list
     consolidated_df = pd.DataFrame(columns=new_column_order)
-    # print(consolidated_df)
-    # consolidated_df.to_csv('collected_data.csv', index=False)
-
-    # Define the course_code variable before calling loop_to_consolidate
-    # course_code = None
 
     # Loop through each Excel file and consolidate the data
     course_code = loop_to_consolidate(excel_files, consolidated_df, collected_data)
@@ -80,10 +75,6 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
         if marks:
             consolidated_names[student_id]['Marks'] += marks
 
-    # print(consolidated_names)
-
-    # course_code = ['EMT 4104', 'EMT 4202', 'EMT 4103', 'EMT 4105', 'EMT 4201', 'EMT 4204', 'EMT 4205', 'EMT 4101', 'EMT 4203', 'EMT 4102']
-    # print(len(course_code))
     # Create an empty DataFrame
     consolidated_data_df = pd.DataFrame(columns=['Reg. No.', 'Name'] + course_code)
 
@@ -101,11 +92,6 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
         
         consolidated_data_df.loc[len(consolidated_data_df)] = row
 
-    # Save the DataFrame to a CSV file
-    # consolidated_data_df.to_csv('collected_data.csv', index=False)
-
-
-
 
     # Sort the consolidated data based on 'Reg. No.'
     consolidated_data_df['Sort Key'] = consolidated_data_df['Reg. No.'].apply(sort_key)
@@ -113,12 +99,6 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
 
     # Drop the temporary 'Sort Key' column
     consolidated_data_df.drop(columns=['Sort Key'], inplace=True)
-
-    # Add 'Ser. No.' column with a count
-    consolidated_data_df['Ser. No.'] = range(1, len(consolidated_data_df) + 1)
-
-    # consolidated_data_df.to_csv('collected_data.csv', index=False)
-
 
 
     # Get units done in semester_4_1 and semester_4_2
@@ -141,36 +121,117 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
         else:
             print(f"Unit {unit} was not done in semester_4_2")
 
+    # Define the columns to consider for checking for missing marks
+    columns_to_check = rearranged_course_code
 
+    # Replace empty strings ('' or ' ') with nan in the specified columns
+    consolidated_data_df[columns_to_check] = consolidated_data_df[columns_to_check].replace(['', ' '], np.nan)
 
+    # Use dropna to remove rows with missing values in specified columns
+    consolidated_data_df = consolidated_data_df.dropna(subset=columns_to_check, how='all')
+
+    # Reset the index after removing rows
+    consolidated_data_df = consolidated_data_df.reset_index(drop=True)
+
+    # Add 'Ser. No.' column with a count
+    consolidated_data_df['Ser. No.'] = range(1, len(consolidated_data_df) + 1)
 
     # Combine all columns: desired columns, dynamic center columns, additional columns
     new_column_order = desired_columns + rearranged_course_code + additional_columns
 
 
     # Reorder the columns in the DataFrame using the reindex method
-    # new_column_order = ['Ser. No.', 'Reg. No.', 'Name'] + course_code + additional_columns
     consolidated_data_df = consolidated_data_df.reindex(columns=new_column_order)
 
 
-    # consolidated_data_df.to_csv('collected_data.csv', index=False)
 
+    # Calculate TU (Total Units), Total, and Mean for each row
+    for index, row in consolidated_data_df.iterrows():
+        total_units = 0
+        total_marks = 0
+        
+        # Calculate total units and total marks for the rearranged_course_code columns
+        for code in rearranged_course_code:
+            if not np.isnan(row[code]):
+                total_units += 1
+                total_marks += row[code]
+        
+        # Fill in TU and Total columns
+        consolidated_data_df.at[index, 'TU'] = total_units
+        consolidated_data_df.at[index, 'Total'] = total_marks
+        
+        # Calculate and fill Mean column if all units were done
+        if total_units == len(rearranged_course_code):
+            mean = total_marks / total_units
+            consolidated_data_df.at[index, 'Mean'] = "{:.2f}".format(mean)
+
+
+    calculate_grade(mean)
+
+    # Add Grade column and fill it based on the Mean column
+    consolidated_data_df['Grade'] = consolidated_data_df['Mean'].apply(calculate_grade)
+
+
+    # Define a function to calculate the recommendation and count supplementaries and special cases
+    def calculate_recommendation(row):
+        supplementaries = [1 for code in rearranged_course_code if
+                        (isinstance(row[code], float) and row[code] < 40) ]
+
+        special_cases = [1 for code in rearranged_course_code if
+                        isinstance(row[code], (str, float, np.nan)) and (row[code] == '' or pd.isna(row[code]) or (
+                                isinstance(row[code], str) and row[code].isspace()))]
+
+        recommendation = []
+
+        if supplementaries:
+            recommendation.append(f'SUPP = {sum(supplementaries)} UNIT{"S" if sum(supplementaries) > 1 else ""}')
+        if special_cases:
+            recommendation.append(f'SPECIAL = {sum(special_cases)} UNIT{"S" if sum(special_cases) > 1 else ""}')
+
+        return ', '.join(recommendation) if recommendation else 'PASS'
+
+
+    # Add Recommendation column and fill it based on the rearranged_course_code columns
+    consolidated_data_df['Recommendation'] = consolidated_data_df.apply(calculate_recommendation, axis=1)
 
 
     # Create a new Excel file and save the consolidated data
-    # consolidated_data_df.to_excel(output_excel_path, index=False)
-
-
-
-    # Create a new Excel file and save the consolidated data
-    # output_excel_path = 'output.xlsx'
     wb = Workbook()
     ws = wb.active
+
+    # Define fill colors 
+    red_fill = PatternFill(start_color="FF6666", end_color="FF6666", fill_type="solid")
+    light_blue_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
+    grey_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+    light_green_fill = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
+
 
     # Add data to the worksheet
     for r_idx, row in enumerate(dataframe_to_rows(consolidated_data_df, index=False, header=True), 1):
         for c_idx, value in enumerate(row, 1):
             cell = ws.cell(row=r_idx, column=c_idx, value=value)
+
+            # Check if the cell contains a pass recommendation or special case and apply the red fill
+            if isinstance(value, str) and ('PASS' in value or value == 'PASS'):
+                cell.fill = light_green_fill
+
+            # Check for marks below 40 and color them in a more intense red
+            if isinstance(value, (int, float)) and value < 40 and ws.cell(row=1, column=c_idx).value in columns_to_check:
+                cell.fill = light_blue_fill
+
+            # Check if the cell contains a supplementary recommendation or special case and apply the red fill
+            if isinstance(value, str) and ('SUPP' in value or value == 'SUPP'):
+                cell.fill = light_blue_fill
+
+            # Check if the cell contains a special recommendation or special case and apply the red fill
+            if isinstance(value, str) and ('SPECIAL' in value or value == 'SPECIAL'):
+                cell.fill = red_fill
+
+            # Check for empty strings ('' or ' '), spaces, or nan and color them grey
+            elif isinstance(value, str) and (value == '' or value.isspace()):
+                cell.fill = red_fill
+            elif isinstance(value, float) and np.isnan(value):
+                cell.fill = red_fill
 
     # Adjust column widths to fit the data
     for column in ws.columns:
@@ -187,7 +248,6 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
 
     # Save the workbook
     wb.save(output_excel_path)
-
 
 
 

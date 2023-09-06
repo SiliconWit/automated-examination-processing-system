@@ -51,6 +51,7 @@ def loop_to_consolidate(excel_files, consolidated_df, collected_data):
     return course_code
 
 
+
 def get_reg_no_data(df, excel_file, file_course_code):
     # Search for the cell containing 'REG. NO.'
     # Improved search resilient to variations and potential errors in the input files
@@ -74,8 +75,6 @@ def get_reg_no_data(df, excel_file, file_course_code):
             internal_marks_cell = (index, internal_marks_indices[0]) if internal_marks_indices else None
             # print(internal_marks_cell)
             break
-
-
 
 
     if reg_no_cell is not None and internal_marks_cell is not None:
@@ -109,10 +108,6 @@ def get_reg_no_data(df, excel_file, file_course_code):
                     if not isinstance(internal_marks, (int, float)):
                         internal_marks = np.nan
 
-                # print(internal_marks)
-
-                # Add internal marks to the collected data
-                # data[-1] = data[-1] + (internal_marks,)
                 # Check the course pattern for each course and add data
                 check_course_pattern(reg_no_value, data, name_value, excel_file, internal_marks, file_course_code)
                 
@@ -124,7 +119,7 @@ def get_reg_no_data(df, excel_file, file_course_code):
             if (reg_no, name) not in collected_data:
                 collected_data.append((course, file_course_code, reg_no, name, internal_marks))
                 # open('collected_data.txt', 'w').writelines('\n'.join(map(str, collected_data)) + '\n')
-        # course_code_data = []
+
         # Store courses found in the current file
         course_files[excel_file] = set(course for course, _, _, _, _, in data)
         course_code_data.append(course_files)
