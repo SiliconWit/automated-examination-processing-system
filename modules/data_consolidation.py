@@ -195,6 +195,25 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
     consolidated_data_df['Recommendation'] = consolidated_data_df.apply(calculate_recommendation, axis=1)
 
 
+
+
+
+
+    # Filter the DataFrame to include only students who passed
+    passed_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'PASS']
+
+    # Select the 'Reg. No.' and 'Name' columns
+    passed_students_list = passed_students_df[['Reg. No.', 'Name']]
+
+    # Save the filtered data to a new .csv file
+    passed_students_list.to_csv('passed_students.csv', index=False)
+
+
+
+
+
+
+
     # Create a new Excel file and save the consolidated data
     wb = Workbook()
     ws = wb.active
