@@ -202,11 +202,87 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
     # Filter the DataFrame to include only students who passed
     passed_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'PASS']
 
-    # Select the 'Reg. No.' and 'Name' columns
-    passed_students_list = passed_students_df[['Reg. No.', 'Name']]
+    # Filter the DataFrame to include only students who has supplementary 
+    supp_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'SUPP']
+
+    # Filter the DataFrame to include only students who passed
+    special_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'SPECIAL']
+
+    # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
+    passed_students_list = passed_students_df[['Ser. No.', 'Reg. No.', 'Name']]
+
+    # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
+    supp_students_list = supp_students_df[['Ser. No.', 'Reg. No.', 'Name']]
+
+    # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
+    special_students_list = special_students_df[['Ser. No.', 'Reg. No.', 'Name']]
 
     # Save the filtered data to a new .csv file
-    passed_students_list.to_csv('passed_students.csv', index=False)
+    # passed_students_list.to_csv('passed_students.csv', index=False)
+
+
+
+
+
+
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib import colors
+
+    # Create a PDF documents
+    pass_list_filename = 'passed_students.pdf'
+    supp_list_filename = 'supp_students.pdf'
+    special_list_filename = 'special_students.pdf'
+    doc = SimpleDocTemplate(pass_list_filename, pagesize=letter)
+
+    # Define the content for the PDF
+    content = []
+
+    # Add a letterhead as a Paragraph
+    styles = getSampleStyleSheet()
+    letterhead_text = "Department of XYZ University\nList of Passed Students"
+    letterhead = Paragraph(letterhead_text, styles['Title'])
+    content.append(letterhead)
+
+    # Add a spacer
+    content.append(Spacer(1, 12))
+
+    # Create a table for the passed students
+    data = [passed_students_list.columns.tolist()] + passed_students_list.values.tolist()
+    table = Table(data)
+
+    # Add style to the table
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        # Left-align the "Name" column (index 2)
+        ('ALIGN', (2, 1), (2, -1), 'LEFT'),
+    ])
+
+    table.setStyle(style)
+
+    content.append(table)
+
+    # Add a spacer
+    content.append(Spacer(1, 12))
+
+    # Add a space for the chairman's signature as a Paragraph
+    chairman_signature_text = "Chairman's Signature: ______________________"
+    chairman_signature = Paragraph(chairman_signature_text, styles['Normal'])
+    content.append(chairman_signature)
+
+    # Build the PDF document
+    # doc.build(content)
+
+    print(f"PDF report saved as '{pass_list_filename}'")
+
+
 
 
 
