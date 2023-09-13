@@ -14,7 +14,7 @@ config_path = "config.toml"  # Specify the path to your TOML configuration file
 config = toml.load(config_path)
 input_folder_path = config["input_folder"]["path"]
 
-def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
+def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pass_list_pdf_output_path, config_path):
     # Get a list of all Excel files in the input folder
 
     center_names = fetch_center_names(input_folder_path)
@@ -208,8 +208,23 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
     # Filter the DataFrame to include only students who passed
     special_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'SPECIAL']
 
+
     # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
-    passed_students_list = passed_students_df[['Ser. No.', 'Reg. No.', 'Name']]
+    passed_students_list = passed_students_df[['Reg. No.', 'Name']]
+
+    # Reset the index after removing rows
+    passed_students_list = passed_students_list.reset_index(drop=True)
+
+    # Add 'Ser. No.' column with a count
+    passed_students_list['Ser. No.'] = range(1, len(passed_students_list) + 1)
+
+    # Combine all columns: desired columns 
+    pass_columns_order = desired_columns 
+
+    # Reorder the columns in the DataFrame using the reindex method
+    passed_students_list = passed_students_list.reindex(columns=pass_columns_order)
+    # print(len(passed_students_list['Ser. No.']))
+
 
     # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
     supp_students_list = supp_students_df[['Ser. No.', 'Reg. No.', 'Name']]
@@ -226,24 +241,64 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
 
 
     from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph 
     from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib import colors
 
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    from reportlab.pdfgen import canvas
+
+    # from reportlab.lib.fonts import addMapping
+
+    import inflect
+
+
+    # # Register the Palatino font
+    # pdfmetrics.registerFont(TTFont('Palatino', 'fonts/palatino-regular.ttf'))
+    # addMapping('Palatino', 0, 0, 'Palatino')  # Map the font name
+
+
     # Create a PDF documents
-    pass_list_filename = 'passed_students.pdf'
-    supp_list_filename = 'supp_students.pdf'
-    special_list_filename = 'special_students.pdf'
-    doc = SimpleDocTemplate(pass_list_filename, pagesize=letter)
+    # supp_list_filename = 'supp_students.pdf'
+    # special_list_filename = 'special_students.pdf'
+
+    # Get the base name (name of the file without extension)
+    pass_title = os.path.splitext(os.path.basename(pass_list_pdf_output_path))[0]
 
     # Define the content for the PDF
     content = []
 
+    # Get the template from the config
+    doc_title = config["document_title"]["document_title"]
+    pass_list_intro = config["pass_list_introduction"]["pass_list_intro_content"]
+    doc_sign_text = config["document_signature_text"]["document_signature_content"]
+    # Example value for the number of candidates
+    pass_num_candidates = len(passed_students_list['Ser. No.'])  # You can replace this with your actual value
+
+    # Create an inflect engine
+    p = inflect.engine()
+
+    # Convert the numeric value into words (e.g., 50 to "Fifty")
+    pass_num_words = p.number_to_words(pass_num_candidates).capitalize()
+
+    # Fill in the template with the actual value
+    pass_list_intro_text = pass_list_intro.format(pass_num_words,pass_num_candidates)
+
     # Add a letterhead as a Paragraph
     styles = getSampleStyleSheet()
-    letterhead_text = "Department of XYZ University\nList of Passed Students"
-    letterhead = Paragraph(letterhead_text, styles['Title'])
-    content.append(letterhead)
+    # letterhead_text = "Department of XYZ University\nList of {} Passed Students".format(len(passed_students_list['Ser. No.']))
+    doc_title_text = Paragraph(doc_title, styles['Title'])
+    pass_list_introduction = Paragraph(pass_list_intro_text, styles['Normal'])
+    content.append(doc_title_text)
+
+    # Add a spacer
+    content.append(Spacer(1, 12))
+
+    content.append(Paragraph("<u>PASS LIST</u>", styles['Title']))
+
+    content.append(pass_list_introduction)
 
     # Add a spacer
     content.append(Spacer(1, 12))
@@ -273,14 +328,40 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
     content.append(Spacer(1, 12))
 
     # Add a space for the chairman's signature as a Paragraph
-    chairman_signature_text = "Chairman's Signature: ______________________"
-    chairman_signature = Paragraph(chairman_signature_text, styles['Normal'])
-    content.append(chairman_signature)
+    # chairman_signature_text = "Chairman's Signature: ______________________"
+    doc_sign_txt = Paragraph(doc_sign_text, styles['Normal'])
+    content.append(doc_sign_txt)
 
-    # Build the PDF document
-    # doc.build(content)
 
-    print(f"PDF report saved as '{pass_list_filename}'")
+
+    def generate_pdf_with_centered_page_numbers(pdf_output_path, title, content):
+        doc = SimpleDocTemplate(pdf_output_path, pagesize=letter, bottomMargin=50)
+        # Create a SimpleDocTemplate with specified metadata
+        doc.title = title
+        doc.subject = "Automatic Exams Processing System Results"
+        doc.author = "SiliconWit"
+        doc.creator = "SiliconWit System"
+        doc.producer = "https://siliconwit.com/"
+        doc.keywords = "Exams Processing"
+
+        def add_centered_page_numbers(canvas, doc):
+            page_num = canvas.getPageNumber()
+            page_text = f"Page {page_num}"
+            canvas.setFont("Times-Roman", 9)  # or set the font to Palatino or inbuild Courier
+            canvas.drawCentredString(letter[0] / 2, 30, page_text)  # Center the page numbers at the bottom
+
+        # Create the custom canvas with centered page numbers
+        c = canvas.Canvas(pdf_output_path, pagesize=letter)
+        c.showPage()
+        c.save()
+
+        # Add your content to the PDF
+        doc.build( content, onFirstPage=add_centered_page_numbers, onLaterPages=add_centered_page_numbers)
+        print(f"PDF report saved as '{pdf_output_path}'")
+
+
+    generate_pdf_with_centered_page_numbers(pass_list_pdf_output_path, pass_title, content)
+
 
 
 
@@ -342,11 +423,11 @@ def consolidate_mark_sheet(input_folder_path, output_excel_path, config_path):
         ws.column_dimensions[column[0].column_letter].width = adjusted_width
 
     # Save the workbook
-    wb.save(output_excel_path)
+    wb.save(consolidated_excel_output_path)
 
 
 
-    print(f"Consolidated mark sheet saved as '{output_excel_path}'.")
+    print(f"Consolidated mark sheet saved as '{consolidated_excel_output_path}'.")
 
     # Print files without "REG. NO." cell
     if files_without_reg_no:

@@ -12,8 +12,9 @@ if __name__ == "__main__":
     # Load paths from configuration
     config = toml.load(config_path)
     input_folder_path = config["input_folder"]["path"]
-    output_excel_path = config["output_excel"]["path"]
+    consolidated_excel_output_path = config["consolidated_excel_output"]["path"]
+    pass_list_pdf_output_path = config["pass_list_pdf_output"]["path"]
 
-    consolidate_mark_sheet(input_folder_path, output_excel_path, config_path)
+    consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pass_list_pdf_output_path, config_path)
 
-    print(f"Mark sheet consolidated and saved as '{output_excel_path}'.")
+    print(f"Mark sheet consolidated and saved as '{consolidated_excel_output_path}'.")

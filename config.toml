@@ -13,8 +13,14 @@ columns = ["TU", "Total", "Mean", "Grade", "Recommendation"]
 [input_folder]
 path = "../individual_sheets"
 
-[output_excel]
+[consolidated_excel_output]
 path = "../EMT4_2_2023.xlsx"
+
+[pass_list_pdf_output]
+path = "../pass_list.pdf"
+
+[supp_list_pdf_output]
+path = "../supp_list.pdf"
 
 [course_patterns]
 E022 = "^E022-01-\\d+/\\d{4}$" # Mechatronic Engineering 
@@ -25,4 +31,38 @@ E023 = "^E023-\\d+-\\d+/\\d{4}$"
 semester_4_1 = ["EMT 4101", "EMT 4102", "EMT 4103", "EMT 4104", "EMT 4105", "SMA 2272"]
 semester_4_2 = ["EMT 4201", "EMT 4202", "EMT 4203", "EMT 4204", "EMT 4205", "SMA 3261"]
 
+[document_title]
+document_title = """
+{University} <br />School of Engineering <br />Department of 
+Mechatronic Engineering <br />Bachelor of Science in Mechatronic 
+Engineering <br />2022/2023 Academic Year <br />Fourth Year 
+Second Semester Examination Results
+"""
 
+[pass_list_introduction]
+pass_list_intro_content = """
+The following <b>{} ({})</b> candidates satisfied the School of 
+Engineering Board of Examiners in the 2022/2023 Academic Year 
+Fourth Year Second Semester examination for the degree of 
+Bachelor of Science in Mechatronic  Engineering. The School 
+of Engineering Board of examiners recommends they proceed to 
+the Fifth Year of study.
+"""
+
+[document_signature_text]
+document_signature_content = """
+<b>Approved by the School Board of Examiners</b>
+<br />
+<br />
+<b>Signed: ________________________________ Date: ____________________________</b>
+<br />
+<i>Dean, School of Engineering</i>
+<br />
+<br />
+<b>Approved by the Senate</b>
+<br />
+<br />
+<b>Signed: ________________________________ Date: ____________________________</b>
+<br />
+<i>Chairperson, Senate</i>
+"""
