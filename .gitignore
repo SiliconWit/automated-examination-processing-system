@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 # some unwanted data
-*.csv
+# *.csv
 *.txt
 *.xls
 *.xlsx

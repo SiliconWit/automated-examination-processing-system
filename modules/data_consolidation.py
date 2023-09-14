@@ -9,6 +9,24 @@ from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill
 
+
+
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph 
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+from reportlab.pdfgen import canvas
+
+# from reportlab.lib.fonts import addMapping
+
+import inflect
+
+
+
 config_path = "config.toml"  # Specify the path to your TOML configuration file
 # Load the configuration from the TOML file
 config = toml.load(config_path)
@@ -201,9 +219,15 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
 
     # Filter the DataFrame to include only students who passed
     passed_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'PASS']
+    # print(passed_students_df)
 
-    # Filter the DataFrame to include only students who has supplementary 
-    supp_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'SUPP']
+    # Custom function to check if the Recommendation contains 'SUPP' and does not contain 'SPECIAL' and units information
+    def has_supp_units(recommendation):
+        return 'SUPP' in recommendation and 'SPECIAL' not in recommendation and any(word.isdigit() for word in recommendation.split())
+
+    # Filter the DataFrame using the custom function
+    supp_students_df = consolidated_data_df[consolidated_data_df['Recommendation'].apply(has_supp_units)]
+
 
     # Filter the DataFrame to include only students who passed
     special_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'SPECIAL']
@@ -211,49 +235,41 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
 
     # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
     passed_students_list = passed_students_df[['Reg. No.', 'Name']]
+    supp_students_list = supp_students_df[['Reg. No.', 'Name']]
 
     # Reset the index after removing rows
     passed_students_list = passed_students_list.reset_index(drop=True)
+    supp_students_list = supp_students_list.reset_index(drop=True)
 
     # Add 'Ser. No.' column with a count
     passed_students_list['Ser. No.'] = range(1, len(passed_students_list) + 1)
+    supp_students_list['Ser. No.'] = range(1, len(supp_students_list) + 1)
+
 
     # Combine all columns: desired columns 
     pass_columns_order = desired_columns 
 
     # Reorder the columns in the DataFrame using the reindex method
     passed_students_list = passed_students_list.reindex(columns=pass_columns_order)
+    supp_students_list = supp_students_list.reindex(columns=desired_columns)
     # print(len(passed_students_list['Ser. No.']))
 
 
     # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
-    supp_students_list = supp_students_df[['Ser. No.', 'Reg. No.', 'Name']]
+    # supp_students_list = supp_students_df[['Ser. No.', 'Reg. No.', 'Name']]
 
     # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
     special_students_list = special_students_df[['Ser. No.', 'Reg. No.', 'Name']]
 
     # Save the filtered data to a new .csv file
-    # passed_students_list.to_csv('passed_students.csv', index=False)
+    supp_students_list.to_csv('../supp_students.csv', index=False)
 
 
 
 
 
-
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph 
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib import colors
-
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-
-    from reportlab.pdfgen import canvas
-
-    # from reportlab.lib.fonts import addMapping
-
-    import inflect
-
+    # Create an inflect engine
+    p = inflect.engine()
 
     # # Register the Palatino font
     # pdfmetrics.registerFont(TTFont('Palatino', 'fonts/palatino-regular.ttf'))
@@ -265,38 +281,67 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     # special_list_filename = 'special_students.pdf'
 
     # Get the base name (name of the file without extension)
-    pass_title = os.path.splitext(os.path.basename(pass_list_pdf_output_path))[0]
+    pass_list_pdf_name = os.path.splitext(os.path.basename(pass_list_pdf_output_path))[0]
 
     # Define the content for the PDF
     content = []
 
     # Get the template from the config
     doc_title = config["document_title"]["document_title"]
+    university_name = config["senate_documents_details"]["university_name"]
+    school_of = config["senate_documents_details"]["school_of"]
+    department_of = config["senate_documents_details"]["department_of"]
+    course_name = config["senate_documents_details"]["course_name"]
+    academic_year = config["senate_documents_details"]["academic_year"]
+    year_of_study = config["senate_documents_details"]["year_of_study"]
+    year_of_study_int = int(year_of_study)
+    year_of_study = p.number_to_words(p.ordinal(year_of_study)).upper()
+    year_of_study_plus = p.number_to_words(p.ordinal(int(year_of_study_int)+1)).capitalize() 
+    semester_of_study = config["senate_documents_details"]["semester_of_study"]
+    semester_of_study = p.number_to_words(p.ordinal(semester_of_study)).upper()
+    doc_title = doc_title.format(university_name, school_of, department_of, course_name, academic_year, year_of_study, semester_of_study)
     pass_list_intro = config["pass_list_introduction"]["pass_list_intro_content"]
     doc_sign_text = config["document_signature_text"]["document_signature_content"]
     # Example value for the number of candidates
     pass_num_candidates = len(passed_students_list['Ser. No.'])  # You can replace this with your actual value
 
-    # Create an inflect engine
-    p = inflect.engine()
+    
 
     # Convert the numeric value into words (e.g., 50 to "Fifty")
     pass_num_words = p.number_to_words(pass_num_candidates).capitalize()
 
     # Fill in the template with the actual value
-    pass_list_intro_text = pass_list_intro.format(pass_num_words,pass_num_candidates)
+    pass_list_intro_text = pass_list_intro.format(pass_num_words,pass_num_candidates, school_of, academic_year, year_of_study.capitalize(), semester_of_study.capitalize(), course_name, school_of, year_of_study_plus)
 
     # Add a letterhead as a Paragraph
     styles = getSampleStyleSheet()
     # letterhead_text = "Department of XYZ University\nList of {} Passed Students".format(len(passed_students_list['Ser. No.']))
-    doc_title_text = Paragraph(doc_title, styles['Title'])
-    pass_list_introduction = Paragraph(pass_list_intro_text, styles['Normal'])
+    # doc_title_text = Paragraph(doc_title, styles['Title'])
+
+    # Define a custom style for the title
+    title_style = ParagraphStyle(
+        name='TitleStyle',
+        fontName='Helvetica-Bold',  # Use Times-Bold for bold
+        fontSize=12,  # Adjust the font size as needed
+        alignment=1,  # Center alignment (1 for center)
+    )
+
+    # Create the Paragraph using the custom title style
+    doc_title_text = Paragraph(doc_title, title_style)
+
+    # Append the Paragraph to the content
     content.append(doc_title_text)
+
+    pass_list_introduction = Paragraph(pass_list_intro_text, styles['Normal'])
+    # content.append(doc_title_text)
 
     # Add a spacer
     content.append(Spacer(1, 12))
 
-    content.append(Paragraph("<u>PASS LIST</u>", styles['Title']))
+    content.append(Paragraph("<u>PASS LIST</u>", title_style))
+
+    # Add a spacer
+    content.append(Spacer(1, 12))
 
     content.append(pass_list_introduction)
 
@@ -360,7 +405,7 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
         print(f"PDF report saved as '{pdf_output_path}'")
 
 
-    generate_pdf_with_centered_page_numbers(pass_list_pdf_output_path, pass_title, content)
+    generate_pdf_with_centered_page_numbers(pass_list_pdf_output_path, pass_list_pdf_name, content)
 
 
 
