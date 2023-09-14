@@ -72,7 +72,7 @@
         {"Unit Code": "EMT 4104", "Unit Title": "Design of Mechatronic System"},
         {"Unit Code": "SMA 3272", "Unit Title": "Statistics"},
         {"Unit Code": "EEE 3209", "Unit Title": "Digital Electronics II"},
-        {"Unit Code": "IGS 4101", "Unit Title": "Critical Thinking & Communication Skills Capstone Project"}
+        {"Unit Code": "IGS 4101", "Unit Title": "Critical Thinking & Communication Skills Capstone Project 1"}
       ],
       "2nd Semester": [
         {"Unit Code": "EMT 4201", "Unit Title": "Spatial Mechanics"},
@@ -90,7 +90,7 @@
     "5th Year": {
       "1st Semester": {
         "Core Units": [
-          {"Unit Code": "EMT 5101", "Unit Title": "Project 1"},
+          {"Unit Code": "EMT 5101", "Unit Title": "Project I"},
           {"Unit Code": "EMT 5102", "Unit Title": "Vibration"},
           {"Unit Code": "EMT 5103", "Unit Title": "Computer Controlled Manufacturing"},
           {"Unit Code": "EMT 5104", "Unit Title": "Industrial Management"}
