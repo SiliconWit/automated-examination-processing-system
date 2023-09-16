@@ -27,6 +27,9 @@ path = "../pass_list.pdf"
 [supp_list_pdf_output]
 path = "../supp_list.pdf"
 
+[senate_documents_output]
+path = "../senate_doc.pdf" 
+
 [course_patterns]
 E022 = "^E022-01-\\d+/\\d{4}$" # Mechatronics Engineering 
 E023 = "^E023-\\d+-\\d+/\\d{4}$"
@@ -58,8 +61,18 @@ The following <b>{} ({})</b> candidates have satisfied the School of
 {} Board of Examiners in the <b>{}</b> Academic Year, 
 <b>{}</b> Year, <b>{}</b> Semester examination for the degree of 
 {}. The School 
-of {} Board of Examiners recommends they proceed to 
+of {} Board of Examiners recommends that <b>they proceed</b> to 
 the <b>{}</b> Year of study.
+"""
+
+[supp_list_introduction]
+supp_list_intro_content = """
+The following <b>{} ({})</b> candidates did not meet the 
+requirements for the units specified next to their names during 
+the <b>{}</b> Year <b>{}</b> Semester examinations for the {} 
+degree in the <b>{}</b> Academic Year. The School of {} 
+Board of Examiners recommends that <b>they take the supplementary units when they are 
+next offered</b>.
 """
 
 [document_signature_text]

@@ -9,8 +9,6 @@ from openpyxl import Workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import PatternFill
 
-
-
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer, Paragraph 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -21,9 +19,9 @@ from reportlab.pdfbase.ttfonts import TTFont
 
 from reportlab.pdfgen import canvas
 
-# from reportlab.lib.fonts import addMapping
-
 import inflect
+
+import PyPDF2 # For combining PDFs
 
 
 
@@ -32,7 +30,7 @@ config_path = "config.toml"  # Specify the path to your TOML configuration file
 config = toml.load(config_path)
 input_folder_path = config["input_folder"]["path"]
 
-def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pass_list_pdf_output_path, config_path):
+def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pass_list_pdf_output_path, supp_list_pdf_output_path, senate_doc_pdf_output_path, config_path):
     # Get a list of all Excel files in the input folder
 
     center_names = fetch_center_names(input_folder_path)
@@ -56,7 +54,6 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     # Loop through each Excel file and consolidate the data
     course_code = loop_to_consolidate(excel_files, consolidated_df, collected_data)
 
-    # exit()
 
     # Group collected data by Reg. No.
     grouped_data = {}
@@ -276,7 +273,7 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     blank_students_list = blank_students_df[['Ser. No.', 'Reg. No.', 'Name']]
 
     # Save the filtered data to a new .csv file
-    supp_students_list.to_csv('../supp_students.csv', index=False)
+    # supp_students_list.to_csv('../supp_students.csv', index=False)
 
 
 
@@ -296,9 +293,11 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
 
     # Get the base name (name of the file without extension)
     pass_list_pdf_name = os.path.splitext(os.path.basename(pass_list_pdf_output_path))[0]
+    supp_list_pdf_name = os.path.splitext(os.path.basename(supp_list_pdf_output_path))[0]
 
-    # Define the content for the PDF
-    content = []
+    # Define the pass_content for the PDF
+    pass_content = []
+    supp_content = []
 
     # Get the template from the config
     doc_title = config["document_title"]["document_title"]
@@ -314,18 +313,23 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     semester_of_study = config["senate_documents_details"]["semester_of_study"]
     semester_of_study = p.number_to_words(p.ordinal(semester_of_study)).upper()
     doc_title = doc_title.format(university_name, school_of, department_of, course_name, academic_year, year_of_study, semester_of_study)
-    pass_list_intro = config["pass_list_introduction"]["pass_list_intro_content"]
-    doc_sign_text = config["document_signature_text"]["document_signature_content"]
-    # Example value for the number of candidates
-    pass_num_candidates = len(passed_students_list['Ser. No.'])  # You can replace this with your actual value
-
     
+    pass_list_intro = config["pass_list_introduction"]["pass_list_intro_content"]
+    supp_list_intro = config["supp_list_introduction"]["supp_list_intro_content"]
+
+    doc_sign_text = config["document_signature_text"]["document_signature_content"]
+    
+    # The number of candidates
+    pass_num_candidates = len(passed_students_list['Ser. No.'])  
+    supp_num_candidates = len(supp_students_list['Ser. No.'])  
 
     # Convert the numeric value into words (e.g., 50 to "Fifty")
     pass_num_words = p.number_to_words(pass_num_candidates).capitalize()
+    supp_num_words = p.number_to_words(supp_num_candidates).capitalize()
 
     # Fill in the template with the actual value
     pass_list_intro_text = pass_list_intro.format(pass_num_words,pass_num_candidates, school_of, academic_year, year_of_study.capitalize(), semester_of_study.capitalize(), course_name, school_of, year_of_study_plus)
+    supp_list_intro_text = supp_list_intro.format(supp_num_words, supp_num_candidates, year_of_study.capitalize(), semester_of_study.capitalize() , course_name , academic_year, school_of)
 
     # Add a letterhead as a Paragraph
     styles = getSampleStyleSheet()
@@ -343,30 +347,39 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     # Create the Paragraph using the custom title style
     doc_title_text = Paragraph(doc_title, title_style)
 
-    # Append the Paragraph to the content
-    content.append(doc_title_text)
+    # Append the Paragraph to the pass_content
+    pass_content.append(doc_title_text)
+    supp_content.append(doc_title_text)
 
     pass_list_introduction = Paragraph(pass_list_intro_text, styles['Normal'])
-    # content.append(doc_title_text)
+    supp_list_introduction = Paragraph(supp_list_intro_text, styles['Normal'])
 
     # Add a spacer
-    content.append(Spacer(1, 12))
+    pass_content.append(Spacer(1, 12))
+    supp_content.append(Spacer(1, 12))
 
-    content.append(Paragraph("<u>PASS LIST</u>", title_style))
-
-    # Add a spacer
-    content.append(Spacer(1, 12))
-
-    content.append(pass_list_introduction)
+    pass_content.append(Paragraph("<u>PASS LIST</u>", title_style))
+    supp_content.append(Paragraph("<u>SUPPLEMENTARY LIST</u>", title_style))
 
     # Add a spacer
-    content.append(Spacer(1, 12))
+    pass_content.append(Spacer(1, 12))
+    supp_content.append(Spacer(1, 12))
+
+    pass_content.append(pass_list_introduction)
+    supp_content.append(supp_list_introduction)
+
+    # Add a spacer
+    pass_content.append(Spacer(1, 12))
+    supp_content.append(Spacer(1, 12))
 
     # Create a table for the passed students
-    data = [passed_students_list.columns.tolist()] + passed_students_list.values.tolist()
-    table = Table(data)
+    pass_data = [passed_students_list.columns.tolist()] + passed_students_list.values.tolist()
+    supp_data = [supp_students_list.columns.tolist()] + supp_students_list.values.tolist()
+    
+    pass_table = Table(pass_data)
+    supp_table = Table(supp_data)
 
-    # Add style to the table
+    # Add style to the pass_table
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
@@ -379,19 +392,23 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
         ('ALIGN', (2, 1), (2, -1), 'LEFT'),
     ])
 
-    table.setStyle(style)
+    pass_table.setStyle(style)
+    supp_table.setStyle(style)
 
-    content.append(table)
+    pass_content.append(pass_table)
+    supp_content.append(supp_table)
 
     # Add a spacer
-    content.append(Spacer(1, 12))
+    pass_content.append(Spacer(1, 12))
+    supp_content.append(Spacer(1, 12))
 
     doc_sign_txt = Paragraph(doc_sign_text, styles['Normal'])
-    content.append(doc_sign_txt)
+    pass_content.append(doc_sign_txt)
+    supp_content.append(doc_sign_txt)
 
 
 
-    def generate_pdf_with_centered_page_numbers(pdf_output_path, title, content):
+    def generate_pdf_with_centered_page_numbers(pdf_output_path, title, pass_content):
         doc = SimpleDocTemplate(pdf_output_path, pagesize=letter, bottomMargin=50)
         # Create a SimpleDocTemplate with specified metadata
         doc.title = title
@@ -412,19 +429,31 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
         c.showPage()
         c.save()
 
-        # Add your content to the PDF
-        doc.build( content, onFirstPage=add_centered_page_numbers, onLaterPages=add_centered_page_numbers)
+        # Add your pass_content to the PDF
+        doc.build( pass_content, onFirstPage=add_centered_page_numbers, onLaterPages=add_centered_page_numbers)
         print(f"PDF report saved as '{pdf_output_path}'")
 
 
-    generate_pdf_with_centered_page_numbers(pass_list_pdf_output_path, pass_list_pdf_name, content)
+    generate_pdf_with_centered_page_numbers(pass_list_pdf_output_path, pass_list_pdf_name, pass_content)
+    generate_pdf_with_centered_page_numbers(supp_list_pdf_output_path, supp_list_pdf_name, supp_content)
 
+    # Combine PDFs 
+    # List of PDF files to combine
+    input_pdfs = [pass_list_pdf_output_path, supp_list_pdf_output_path]
 
+    # Output file name for the combined PDF
+    output_pdf_file = senate_doc_pdf_output_path
 
+    # Create a PDF merger object
+    pdf_merger = PyPDF2.PdfFileMerger()
 
+    # Append each input PDF to the merger
+    for pdf_file in input_pdfs:
+        pdf_merger.append(pdf_file)
 
-
-
+    # Write the merged PDF to the output file
+    with open(output_pdf_file, 'wb') as output_pdf:
+        pdf_merger.write(output_pdf)
 
 
 
