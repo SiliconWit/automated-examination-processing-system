@@ -1,6 +1,11 @@
 # Add various configurations 
 
-# Must Have Key Words:
+# Existing score sheets have some differences! 
+
+# To delete all summary of results and such analysis first, 
+# ensure there is a keyword "summary" 
+
+# Must Have Key Words (once!):
 # 'REG. NO.', 'INTERNAL EXAMINER MARKS /100'
 # Input xlsx files must be named only as unit/subject code e.g. "EMT 4101.xlsx".
 
@@ -8,7 +13,7 @@
 columns = ["Ser. No.", "Reg. No.", "Name"] # DO NOT change this
 
 [additional_columns]
-columns = ["TU", "Total", "Mean", "Grade", "Recommendation"]
+columns = ["TU", "Total", "Mean", "Grade", "Status"]
 
 [input_folder]
 path = "../individual_sheets"

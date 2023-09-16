@@ -37,7 +37,25 @@ def loop_to_consolidate(excel_files, consolidated_df, collected_data):
         # global file_course_code 
         file_course_code = file_path.split("/")[-1].split(".xlsx")[0]
         # print(file_course_code)
-        df = pd.read_excel(file_path, header=None)  # Read without header
+        # df = pd.read_excel(file_path, header=None)  # Read without header
+
+        # Read the Excel sheet into a Pandas DataFrame
+        initial_df = pd.read_excel(file_path, header=None)
+
+        # Define a regular expression pattern for the keyword variations
+        summary_keyword_pattern = r'summary\s*of\s*results|summary|analysis'
+
+        # Find the index where the keyword pattern appears (case-insensitive)
+        split_indices = initial_df[initial_df.apply(lambda row: re.search(summary_keyword_pattern, str(row), re.IGNORECASE), axis=1).notna()].index
+
+        # Check if any indices were found
+        if len(split_indices) > 0:
+            # Keep only the rows before the first keyword pattern
+            split_index = split_indices[0]
+            df = initial_df.iloc[:split_index]
+        else:
+            # Handle the case where the keyword pattern was not found
+            print("Summary keyword pattern not found in the DataFrame.")
 
         # Search for the cell containing 'REG. NO.'
         get_reg_no_data(df, excel_file, file_course_code)
@@ -68,20 +86,6 @@ def get_reg_no_data(df, excel_file, file_course_code):
         # Define a regular expression pattern to match all variations
         internal_marks_cell_pattern = re.compile(r'(int\.?|internal)\s*examiner\s*marks\s*/?\s*100', re.IGNORECASE)
 
-        # # Test the pattern with sample variations
-        # test_strings = [
-        #     "internal examiner marks /100",
-        #     "INTERNAL EXAMINER MARKS  /100",
-        #     "INT.  EXAMINER MARKS  /100",
-        # ]
-
-        # for test_string in test_strings:
-        #     if internal_marks_cell_pattern.search(test_string):
-        #         print(f"Matched: {test_string}")
-        #     else:
-        #         print(f"Not Matched: {test_string}")
-
-
         matching_indices = [i for i, val in enumerate(lower_row_values) if reg_no_pattern.search(val)]
         # print(matching_indices)
         internal_marks_indices = [i for i, val in enumerate(lower_row_values) if internal_marks_cell_pattern.search(val)]
@@ -91,8 +95,8 @@ def get_reg_no_data(df, excel_file, file_course_code):
             # print(reg_no_cell)
             internal_marks_cell = (index, internal_marks_indices[0]) if internal_marks_indices else None
             # print(internal_marks_cell)
-            break
-
+            # break # don't break otherwise you'll stop search 
+        
 
     if reg_no_cell is not None and internal_marks_cell is not None:
         reg_no_row = reg_no_cell[0]
@@ -135,7 +139,7 @@ def get_reg_no_data(df, excel_file, file_course_code):
             # open('data0.txt', 'w').writelines('\n'.join(map(str, data)) + '\n')
             if (reg_no, name) not in collected_data:
                 collected_data.append((course, file_course_code, reg_no, name, internal_marks))
-                # open('collected_data.txt', 'w').writelines('\n'.join(map(str, collected_data)) + '\n')
+                # open('../collected_data.txt', 'w').writelines('\n'.join(map(str, collected_data)) + '\n')
 
         # Store courses found in the current file
         course_files[excel_file] = set(course for course, _, _, _, _, in data)

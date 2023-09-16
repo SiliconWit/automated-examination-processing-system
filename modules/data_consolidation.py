@@ -36,6 +36,7 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     # Get a list of all Excel files in the input folder
 
     center_names = fetch_center_names(input_folder_path)
+    # print(center_names)
 
     # Get the column order from the configuration
     desired_columns = config["column_order"]["columns"]
@@ -55,7 +56,7 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     # Loop through each Excel file and consolidate the data
     course_code = loop_to_consolidate(excel_files, consolidated_df, collected_data)
 
-
+    # exit()
 
     # Group collected data by Reg. No.
     grouped_data = {}
@@ -66,8 +67,8 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
         else:
             grouped_data[reg_no] = [(name, file_course_code, internal_marks)]
 
-    # open('collected_data.txt', 'w').writelines('\n'.join(map(str, collected_data)) + '\n')
-    # open('grouped_data.txt', 'w').writelines('\n'.join(map(str, grouped_data.items())) + '\n')
+    # open('../collected_data2.txt', 'w').writelines('\n'.join(map(str, collected_data)) + '\n')
+    # open('../grouped_data.txt', 'w').writelines('\n'.join(map(str, grouped_data.items())) + '\n')
     # print(course_code)
     # Consolidate names for the same Reg. No.
     consolidated_names = {}
@@ -80,18 +81,31 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
         # print(name_code_mark)
         consolidated_names[student_id] = {'Name': '', 'Code': '', 'Marks': []}
         
+        # name_counts = Counter([name for name, code, mark in name_code_mark if name and not pd.isna(name) and name.strip() != ""])
+        # if name_counts:
+        #     most_common_name = name_counts.most_common(1)[0][0]
+        #     consolidated_names[student_id]['Name'] = most_common_name
+
+        # Advanced name format 
         name_counts = Counter([name for name, code, mark in name_code_mark if name and not pd.isna(name) and name.strip() != ""])
         if name_counts:
             most_common_name = name_counts.most_common(1)[0][0]
-            consolidated_names[student_id]['Name'] = most_common_name
+            # Split the most common name into parts (first and last name)
+            name_parts = most_common_name.split()
+            if len(name_parts) >= 2:
+                # Join the parts in title case except for the last name in all caps
+                formatted_name = ' '.join([part.capitalize() if i < len(name_parts) - 1 else part.upper() for i, part in enumerate(name_parts)])
+                consolidated_names[student_id]['Name'] = formatted_name
 
-        course_code_name = [code for name, code, mark in name_code_mark if (name or pd.isna(name) or name.strip() == "") and (name == most_common_name or pd.isna(name) or name.strip() == "")]
+        course_code_name = [code for name, code, mark in name_code_mark ]
         if course_code_name:
             consolidated_names[student_id]['Code'] = course_code_name
         
-        marks = [mark for name, code, mark in name_code_mark if (name or pd.isna(name) or name.strip() == "") and (name == most_common_name or pd.isna(name) or name.strip() == "")]
+        marks = [mark for name, code, mark in name_code_mark ]
         if marks:
             consolidated_names[student_id]['Marks'] += marks
+
+    # open('../consolidated_names.txt', 'w').writelines('\n'.join(map(str, consolidated_names.items())) + '\n')
 
     # Create an empty DataFrame
     consolidated_data_df = pd.DataFrame(columns=['Reg. No.', 'Name'] + course_code)
@@ -190,27 +204,27 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     consolidated_data_df['Grade'] = consolidated_data_df['Mean'].apply(calculate_grade)
 
 
-    # Define a function to calculate the recommendation and count supplementaries and special cases
+    # Define a function to calculate the status and count supplementaries and blank cases
     def calculate_recommendation(row):
         supplementaries = [1 for code in rearranged_course_code if
                         (isinstance(row[code], float) and row[code] < 40) ]
 
-        special_cases = [1 for code in rearranged_course_code if
+        blank_cases = [1 for code in rearranged_course_code if
                         isinstance(row[code], (str, float, np.nan)) and (row[code] == '' or pd.isna(row[code]) or (
                                 isinstance(row[code], str) and row[code].isspace()))]
 
-        recommendation = []
+        status = []
 
         if supplementaries:
-            recommendation.append(f'SUPP = {sum(supplementaries)} UNIT{"S" if sum(supplementaries) > 1 else ""}')
-        if special_cases:
-            recommendation.append(f'SPECIAL = {sum(special_cases)} UNIT{"S" if sum(special_cases) > 1 else ""}')
+            status.append(f'SUPP = {sum(supplementaries)} UNIT{"S" if sum(supplementaries) > 1 else ""}')
+        if blank_cases:
+            status.append(f'BLANK = {sum(blank_cases)} UNIT{"S" if sum(blank_cases) > 1 else ""}')
 
-        return ', '.join(recommendation) if recommendation else 'PASS'
+        return ', '.join(status) if status else 'PASS'
 
 
-    # Add Recommendation column and fill it based on the rearranged_course_code columns
-    consolidated_data_df['Recommendation'] = consolidated_data_df.apply(calculate_recommendation, axis=1)
+    # Add Status column and fill it based on the rearranged_course_code columns
+    consolidated_data_df['Status'] = consolidated_data_df.apply(calculate_recommendation, axis=1)
 
 
 
@@ -218,19 +232,19 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
 
 
     # Filter the DataFrame to include only students who passed
-    passed_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'PASS']
+    passed_students_df = consolidated_data_df[consolidated_data_df['Status'] == 'PASS']
     # print(passed_students_df)
 
-    # Custom function to check if the Recommendation contains 'SUPP' and does not contain 'SPECIAL' and units information
-    def has_supp_units(recommendation):
-        return 'SUPP' in recommendation and 'SPECIAL' not in recommendation and any(word.isdigit() for word in recommendation.split())
+    # Custom function to check if the Status contains 'SUPP' and does not contain 'BLANK' and units information
+    def has_supp_units(status):
+        return 'SUPP' in status and 'BLANK' not in status and any(word.isdigit() for word in status.split())
 
     # Filter the DataFrame using the custom function
-    supp_students_df = consolidated_data_df[consolidated_data_df['Recommendation'].apply(has_supp_units)]
+    supp_students_df = consolidated_data_df[consolidated_data_df['Status'].apply(has_supp_units)]
 
 
     # Filter the DataFrame to include only students who passed
-    special_students_df = consolidated_data_df[consolidated_data_df['Recommendation'] == 'SPECIAL']
+    blank_students_df = consolidated_data_df[consolidated_data_df['Status'] == 'BLANK']
 
 
     # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
@@ -259,7 +273,7 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     # supp_students_list = supp_students_df[['Ser. No.', 'Reg. No.', 'Name']]
 
     # Select the 'Ser. No.', 'Reg. No.' and 'Name' columns
-    special_students_list = special_students_df[['Ser. No.', 'Reg. No.', 'Name']]
+    blank_students_list = blank_students_df[['Ser. No.', 'Reg. No.', 'Name']]
 
     # Save the filtered data to a new .csv file
     supp_students_list.to_csv('../supp_students.csv', index=False)
@@ -278,7 +292,7 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
 
     # Create a PDF documents
     # supp_list_filename = 'supp_students.pdf'
-    # special_list_filename = 'special_students.pdf'
+    # blank_list_filename = 'blank_students.pdf'
 
     # Get the base name (name of the file without extension)
     pass_list_pdf_name = os.path.splitext(os.path.basename(pass_list_pdf_output_path))[0]
@@ -372,8 +386,6 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     # Add a spacer
     content.append(Spacer(1, 12))
 
-    # Add a space for the chairman's signature as a Paragraph
-    # chairman_signature_text = "Chairman's Signature: ______________________"
     doc_sign_txt = Paragraph(doc_sign_text, styles['Normal'])
     content.append(doc_sign_txt)
 
@@ -383,9 +395,9 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
         doc = SimpleDocTemplate(pdf_output_path, pagesize=letter, bottomMargin=50)
         # Create a SimpleDocTemplate with specified metadata
         doc.title = title
-        doc.subject = "Automatic Exams Processing System Results"
+        doc.subject = "Automatic Exams Processing System (AEPS) Results"
         doc.author = "SiliconWit"
-        doc.creator = "SiliconWit System"
+        doc.creator = "SiliconWit Open AEPS"
         doc.producer = "https://siliconwit.com/"
         doc.keywords = "Exams Processing"
 
@@ -432,7 +444,7 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
         for c_idx, value in enumerate(row, 1):
             cell = ws.cell(row=r_idx, column=c_idx, value=value)
 
-            # Check if the cell contains a pass recommendation or special case and apply the red fill
+            # Check if the cell contains a pass status or blank case and apply the red fill
             if isinstance(value, str) and ('PASS' in value or value == 'PASS'):
                 cell.fill = light_green_fill
 
@@ -440,12 +452,12 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
             if isinstance(value, (int, float)) and value < 40 and ws.cell(row=1, column=c_idx).value in columns_to_check:
                 cell.fill = light_blue_fill
 
-            # Check if the cell contains a supplementary recommendation or special case and apply the red fill
+            # Check if the cell contains a supplementary status or blank case and apply the red fill
             if isinstance(value, str) and ('SUPP' in value or value == 'SUPP'):
                 cell.fill = light_blue_fill
 
-            # Check if the cell contains a special recommendation or special case and apply the red fill
-            if isinstance(value, str) and ('SPECIAL' in value or value == 'SPECIAL'):
+            # Check if the cell contains a blank status or blank case and apply the red fill
+            if isinstance(value, str) and ('BLANK' in value or value == 'BLANK'):
                 cell.fill = red_fill
 
             # Check for empty strings ('' or ' '), spaces, or nan and color them grey
