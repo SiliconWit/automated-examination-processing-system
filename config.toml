@@ -2,12 +2,16 @@
 
 # Existing score sheets have some differences! 
 
-# To delete all summary of results and such analysis first, 
+# After add students data,  
 # ensure there is a keyword "summary" 
+# Ensure the sheet is well updated with current names 
 
 # Must Have Key Words (once!):
 # 'REG. NO.', 'INTERNAL EXAMINER MARKS /100'
 # Input xlsx files must be named only as unit/subject code e.g. "EMT 4101.xlsx".
+
+# Delete invisible files in a folder 
+# e.g.: find . -type f -name '.~lock.*.xlsx#' -delete
 
 [column_order]
 columns = ["Ser. No.", "Reg. No.", "Name"] # DO NOT change this
@@ -15,11 +19,16 @@ columns = ["Ser. No.", "Reg. No.", "Name"] # DO NOT change this
 [additional_columns]
 columns = ["TU", "Total", "Mean", "Grade", "Status"]
 
+[mechatronics_engineering_units]
+path = "data/units/mechatronics_engineering_units.json"
+
 [input_folder]
-path = "../individual_sheets"
+# path = "../individual_sheets"
+path = "../individual_sheets2"
 
 [consolidated_excel_output]
-path = "../EMT4_2_2023.xlsx"
+# path = "../EMT4_2_2023.xlsx"
+path = "../EMT2_2_2023.xlsx"
 
 [pass_list_pdf_output]
 path = "../pass_list.pdf"
@@ -31,13 +40,16 @@ path = "../supp_list.pdf"
 path = "../senate_doc.pdf" 
 
 [course_patterns]
-E022 = "^E022-01-\\d+/\\d{4}$" # Mechatronics Engineering 
+# E022 = "^E022-01-\\d+/\\d{4}$" # Mechatronics Engineering 
+E022 = "^E022[-‐]01[-‐]\\d+/\\d{4}$" # Ignore subtle hyphen variations
+# ^(E0[‐-]022|EO[‐-]022)[-‐]01[-‐]\d+/\d{4}$ # o or O and 0 are different!
 E023 = "^E023-\\d+-\\d+/\\d{4}$"
+
 # Add more patterns for other courses if needed
 
-[semester_order]
-semester_4_1 = ["EMT 4101", "EMT 4102", "EMT 4103", "EMT 4104", "EMT 4105", "SMA 2272"]
-semester_4_2 = ["EMT 4201", "EMT 4202", "EMT 4203", "EMT 4204", "EMT 4205", "SMA 3261"]
+# [semester_order]
+# semester_4_1 = ["EMT 4101", "EMT 4102", "EMT 4103", "EMT 4104", "EMT 4105", "SMA 2272"]
+# semester_4_2 = ["EMT 4201", "EMT 4202", "EMT 4203", "EMT 4204", "EMT 4205", "SMA 3261"]
 
 [senate_documents_details]
 university_name = "XYZ University"
@@ -45,7 +57,7 @@ school_of = "Engineering"
 department_of = "Mechatronics Engineering"
 course_name = "Bachelor of Science in Mechatronics Engineering"
 academic_year = "2022/2023"
-year_of_study = "4"
+# year_of_study = "4"
 semester_of_study = "2"
 
 [document_title]
@@ -61,8 +73,8 @@ The following <b>{} ({})</b> candidates have satisfied the School of
 {} Board of Examiners in the <b>{}</b> Academic Year, 
 <b>{}</b> Year, <b>{}</b> Semester examination for the degree of 
 {}. The School 
-of {} Board of Examiners recommends that <b>they proceed</b> to 
-the <b>{}</b> Year of study.
+of {} Board of Examiners recommends that <b>they proceed to 
+the {} Year of study</b>.
 """
 
 [supp_list_introduction]

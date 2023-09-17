@@ -22,8 +22,12 @@ def extract_and_save_all_sheets(input_file_path, output_folder):
 
 if __name__ == "__main__":
     # Specify the file path of the source Excel file and the output folder
-    source_excel_file_path = "../../MET_MARCH_2023_YR_4.2_CMS.xlsx"
-    output_folder = "../../extracted_sheets"
+    # source_excel_file_path = "../../MET_MARCH_2023_YR_4.2_CMS.xlsx"
+    # output_folder = "../../extracted_sheets"
+
+    source_excel_file_path = "../../March_2023_YR_2.2_CMS.xlsx"
+    output_folder = "../../extracted_sheets2"
+
     
     # Extract and save all sheets
     extract_and_save_all_sheets(source_excel_file_path, output_folder)

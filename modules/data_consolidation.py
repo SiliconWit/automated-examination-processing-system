@@ -1,4 +1,4 @@
-import os, toml, re
+import os, toml, re, sys, json
 import pandas as pd
 from .file_processing import *
 from .utilities import *
@@ -30,11 +30,35 @@ config_path = "config.toml"  # Specify the path to your TOML configuration file
 config = toml.load(config_path)
 input_folder_path = config["input_folder"]["path"]
 
-def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pass_list_pdf_output_path, supp_list_pdf_output_path, senate_doc_pdf_output_path, config_path):
+def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolidated_excel_output_path, pass_list_pdf_output_path, supp_list_pdf_output_path, senate_doc_pdf_output_path, config_path):
     # Get a list of all Excel files in the input folder
 
     center_names = fetch_center_names(input_folder_path)
-    # print(center_names)
+    print("Exam files: {}".format(center_names))
+
+
+
+
+
+    mechatronics_json_data = json.load(open(mechatronics_units_path))
+
+    # Step 1: Check if all files are .xlsx
+    check_xlsx_files(input_folder_path)
+
+    # Step 2: Check if filenames match Unit Codes
+    # unit_codes = {unit["Unit Code"] for year_data in mechatronics_json_data.values() for semesters in year_data.values() if isinstance(semesters, (list, dict)) for unit in semesters if isinstance(unit, dict)}
+    unit_codes = center_names
+    check_filenames_match_units(input_folder_path, unit_codes)
+
+    # Step 3: Check if unit codes belong to a single year
+    year = check_unit_codes_single_year(unit_codes, mechatronics_json_data)
+
+    print(f"All filenames match Unit Codes and belong to the year: {year}")
+    yr_to_process = year 
+
+
+
+
 
     # Get the column order from the configuration
     desired_columns = config["column_order"]["columns"]
@@ -130,25 +154,33 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     consolidated_data_df.drop(columns=['Sort Key'], inplace=True)
 
 
-    # Get units done in semester_4_1 and semester_4_2
-    semester_4_1_units = config['semester_order']['semester_4_1']
-    semester_4_2_units = config['semester_order']['semester_4_2']
+    # # Get units done in semester_4_1 and yr4_2nd_semester
+    # semester_4_1_units = config['semester_order']['semester_4_1']
+    # semester_4_2_units = config['semester_order']['semester_4_2']
+
+    # Extract unit codes from the 4th Year 1st Semester and 4th Year 2nd Semester
+    x_year_1st_semester = mechatronics_json_data.get(yr_to_process, {}).get("1st Semester", [])
+    x_year_2nd_semester = mechatronics_json_data.get(yr_to_process, {}).get("2nd Semester", [])
+
+    # Extract unit codes from the units
+    x_yr_1st_semester_codes = [unit["Unit Code"] for unit in x_year_1st_semester]
+    x_yr_2nd_semester_codes = [unit["Unit Code"] for unit in x_year_2nd_semester]
 
     # Initialize a list to store the rearranged course codes
     rearranged_course_code = []
 
     # Rearrange course codes based on semester order
-    for unit in semester_4_1_units:
+    for unit in x_yr_1st_semester_codes:
         if unit in course_code:
             rearranged_course_code.append(unit)
         else:
-            print(f"Unit {unit} was not done in semester_4_1")
+            print(f"Unit {unit} was NOT done in {yr_to_process} 1st semester")
 
-    for unit in semester_4_2_units:
+    for unit in x_yr_2nd_semester_codes:
         if unit in course_code:
             rearranged_course_code.append(unit)
         else:
-            print(f"Unit {unit} was not done in semester_4_2")
+            print(f"Unit {unit} was NOT done in {yr_to_process} 2nd semester")
 
     # Define the columns to consider for checking for missing marks
     columns_to_check = rearranged_course_code
@@ -306,9 +338,16 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     department_of = config["senate_documents_details"]["department_of"]
     course_name = config["senate_documents_details"]["course_name"]
     academic_year = config["senate_documents_details"]["academic_year"]
-    year_of_study = config["senate_documents_details"]["year_of_study"]
-    year_of_study_int = int(year_of_study)
-    year_of_study = p.number_to_words(p.ordinal(year_of_study)).upper()
+
+    # year_of_study = config["senate_documents_details"]["year_of_study"]
+    year_of_study = yr_to_process
+
+    # Extract the numeric part using the first character of year_of_study
+    # year_of_study_int will contain the integer value (1, 2, 3, 4, or 5)
+    year_of_study_int = int(year_of_study[0])
+    # print(year_of_study_int)
+
+    year_of_study = p.number_to_words(p.ordinal(year_of_study_int)).upper()
     year_of_study_plus = p.number_to_words(p.ordinal(int(year_of_study_int)+1)).capitalize() 
     semester_of_study = config["senate_documents_details"]["semester_of_study"]
     semester_of_study = p.number_to_words(p.ordinal(semester_of_study)).upper()
@@ -362,8 +401,8 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     supp_content.append(Paragraph("<u>SUPPLEMENTARY LIST</u>", title_style))
 
     # Add a spacer
-    pass_content.append(Spacer(1, 12))
-    supp_content.append(Spacer(1, 12))
+    # pass_content.append(Spacer(1, 12))
+    # supp_content.append(Spacer(1, 12))
 
     pass_content.append(pass_list_introduction)
     supp_content.append(supp_list_introduction)
@@ -442,7 +481,23 @@ def consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pa
     input_pdfs = [pass_list_pdf_output_path, supp_list_pdf_output_path]
 
     # Output file name for the combined PDF
-    output_pdf_file = senate_doc_pdf_output_path
+    # Update senate doc name
+    general_senate_pdf_path = senate_doc_pdf_output_path
+    yr_processed = yr_to_process
+
+    # Remove spaces from yr_processed and replace them with underscores
+    yr_processed = yr_processed.replace(" ", "_")
+
+    # Convert the characters in yr_processed to lowercase
+    yr_processed = yr_processed.lower()
+
+    # Split the file extension from general_senate_pdf_path
+    base_name, extension = os.path.splitext(general_senate_pdf_path)
+
+    # Combine base_name, yr_processed, and the original extension to create output_pdf_file
+    output_pdf_file = f"{base_name}_{yr_processed}{extension}"
+
+
 
     # Create a PDF merger object
     pdf_merger = PyPDF2.PdfFileMerger()

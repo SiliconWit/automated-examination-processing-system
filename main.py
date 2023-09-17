@@ -16,7 +16,8 @@ if __name__ == "__main__":
     pass_list_pdf_output_path = config["pass_list_pdf_output"]["path"]
     supp_list_pdf_output_path = config["supp_list_pdf_output"]["path"]
     senate_doc_pdf_output_path = config["senate_documents_output"]["path"]
+    mechatronics_units_path = config["mechatronics_engineering_units"]["path"]
 
-    consolidate_mark_sheet(input_folder_path, consolidated_excel_output_path, pass_list_pdf_output_path, supp_list_pdf_output_path, senate_doc_pdf_output_path, config_path)
+    consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolidated_excel_output_path, pass_list_pdf_output_path, supp_list_pdf_output_path, senate_doc_pdf_output_path, config_path)
 
     print(f"Mark sheet consolidated and saved as '{consolidated_excel_output_path}'.")

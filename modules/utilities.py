@@ -1,5 +1,5 @@
 import os
-import re
+import re, sys 
 import toml
 import numpy as np
 import pandas as pd
@@ -13,6 +13,8 @@ input_folder_path = config["input_folder"]["path"]
 
 # Load the course patterns from the configuration
 course_patterns = config["course_patterns"]
+# course_patterns = config["course_patterns"]["E022"] # Mechatronics 
+# print(course_patterns)
 
 excel_files = [file for file in os.listdir(input_folder_path) if file.endswith('.xlsx')]
 
@@ -55,7 +57,9 @@ def loop_to_consolidate(excel_files, consolidated_df, collected_data):
             df = initial_df.iloc[:split_index]
         else:
             # Handle the case where the keyword pattern was not found
-            print("Summary keyword pattern not found in the DataFrame.")
+            print("Summary keyword pattern for {} not found in the DataFrame.".format(file_path))
+            print("Please add the keyword 'summary' or delete the file and rerun.")
+            sys.exit(1)
 
         # Search for the cell containing 'REG. NO.'
         get_reg_no_data(df, excel_file, file_course_code)
@@ -95,6 +99,7 @@ def get_reg_no_data(df, excel_file, file_course_code):
             # print(reg_no_cell)
             internal_marks_cell = (index, internal_marks_indices[0]) if internal_marks_indices else None
             # print(internal_marks_cell)
+            # print(excel_file)
             # break # don't break otherwise you'll stop search 
         
 
@@ -145,10 +150,11 @@ def get_reg_no_data(df, excel_file, file_course_code):
         course_files[excel_file] = set(course for course, _, _, _, _, in data)
         course_code_data.append(course_files)
         # print(course_files)
+        # print(excel_file)
     elif reg_no_cell is None:
         files_without_reg_no.append(excel_file)
     elif internal_marks_cell is None:
-        print("Maybe 'INTERNAL EXAMINER MARKS /100' cell is missing.")
+        print("Maybe 'INTERNAL EXAMINER MARKS /100' cell is missing in {}.".format(excel_file))
 
     # Check for mixed courses in each Excel file
     for excel_file, courses in course_files.items():
