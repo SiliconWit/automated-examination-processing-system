@@ -1,4 +1,4 @@
-import os
+import os, json 
 import re, sys 
 import toml
 import numpy as np
@@ -10,6 +10,7 @@ config_path = "config.toml"  # Specify the path to your TOML configuration file
 config = toml.load(config_path)
 
 input_folder_path = config["input_folder"]["path"]
+running_report_path = config["running_report"]["path"]
 
 # Load the course patterns from the configuration
 course_patterns = config["course_patterns"]
@@ -178,4 +179,33 @@ def check_course_pattern(reg_no_value, data, name_value, excel_file, internal_ma
     else:
         print(f"Anomaly in file '{excel_file}': Reg. No. value '{reg_no_value}' does not match any of the expected course patterns")
 
+
+def setup_logging():
+    # Create or recreate the 'running_reports.txt' file
+    with open(running_report_path, 'w') as log_file:
+        pass  # This will create an empty file if it doesn't exist or truncate it if it does
+
+def log_print(text):
+    # Append the text to 'running_reports.txt'
+    with open(running_report_path, 'a') as log_file:
+        log_file.write(text + '\n')
+    
+    # Print the text to the console
+    print(text)
+
+# Find unit name given unit code 
+def find_unit_name(mechatronics_units_path, unit_code):
+    mechatronics_json_data = json.load(open(mechatronics_units_path))
+    for year, semesters in mechatronics_json_data.items():
+        for semester, units in semesters.items():
+            if isinstance(units, list):
+                for unit in units:
+                    if unit["Unit Code"] == unit_code:
+                        return unit["Unit Title"]
+            elif isinstance(units, dict):
+                for option, option_units in units.items():
+                    for unit in option_units:
+                        if unit["Unit Code"] == unit_code:
+                            return unit["Unit Title"]
+    return "Unit not found"
 

@@ -34,7 +34,7 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
     # Get a list of all Excel files in the input folder
 
     center_names = fetch_center_names(input_folder_path)
-    print("Exam files: {}".format(center_names))
+    log_print("Exam files: {}".format(center_names))
 
 
 
@@ -53,7 +53,7 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
     # Step 3: Check if unit codes belong to a single year
     year = check_unit_codes_single_year(unit_codes, mechatronics_json_data)
 
-    print(f"All filenames match Unit Codes and belong to the year: {year}")
+    log_print(f"All filenames match Unit Codes and belong to the year: {year}")
     yr_to_process = year 
 
 
@@ -165,6 +165,13 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
     # Extract unit codes from the units
     x_yr_1st_semester_codes = [unit["Unit Code"] for unit in x_year_1st_semester]
     x_yr_2nd_semester_codes = [unit["Unit Code"] for unit in x_year_2nd_semester]
+    #print(x_yr_1st_semester_codes)
+    # print(least_common_unit_codes)
+    print(x_yr_2nd_semester_codes)
+
+    # Check if 'least_common_unit_codes' contains non-empty elements before inserting into my_list
+    if any(elem.strip() for elem in least_common_unit_codes):
+        x_yr_1st_semester_codes.insert(0, *least_common_unit_codes) # Insert before 
 
     # Initialize a list to store the rearranged course codes
     rearranged_course_code = []
@@ -174,13 +181,15 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
         if unit in course_code:
             rearranged_course_code.append(unit)
         else:
-            print(f"Unit {unit} was NOT done in {yr_to_process} 1st semester")
+            matched_unit_name = find_unit_name(mechatronics_units_path, unit)
+            log_print(f"Unit {unit} {matched_unit_name} was NOT done in {yr_to_process} 1st semester")
 
     for unit in x_yr_2nd_semester_codes:
         if unit in course_code:
             rearranged_course_code.append(unit)
         else:
-            print(f"Unit {unit} was NOT done in {yr_to_process} 2nd semester")
+            matched_unit_name = find_unit_name(mechatronics_units_path, unit)
+            log_print(f"Unit {unit} {matched_unit_name}  was NOT done in {yr_to_process} 2nd semester")
 
     # Define the columns to consider for checking for missing marks
     columns_to_check = rearranged_course_code
@@ -349,8 +358,32 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
 
     year_of_study = p.number_to_words(p.ordinal(year_of_study_int)).upper()
     year_of_study_plus = p.number_to_words(p.ordinal(int(year_of_study_int)+1)).capitalize() 
-    semester_of_study = config["senate_documents_details"]["semester_of_study"]
-    semester_of_study = p.number_to_words(p.ordinal(semester_of_study)).upper()
+    # semester_of_study = config["senate_documents_details"]["semester_of_study"]
+    
+    # print(center_names)
+    # print(x_yr_2nd_semester_codes)
+    x_yr_2nd_semester_codes_set = set(x_yr_2nd_semester_codes)
+    # Calculate the number of units in 'center_names' not available in x_yr_2nd_semester_codes_set
+    unavailable_units = len(center_names - x_yr_2nd_semester_codes_set)
+
+    # Define a threshold for "most" (you can adjust this as needed)
+    semester_threshold = len(center_names) // 2  # Half (50%) of the units in center_names
+
+    # Check if most units in center_names are not available in x_yr_2nd_semester_codes_set
+    if unavailable_units > semester_threshold:
+        semester_of_study = "1"
+        semester_of_study_plus = int(semester_of_study[0])+1
+        semester_of_study = p.number_to_words(p.ordinal(semester_of_study)).upper()
+        pass_intro_recommendation_txt = "<b>they proceed to the {} Semester</b>".format(p.number_to_words(p.ordinal(semester_of_study_plus)).capitalize()) 
+        log_print("This seems to be the 1st Semester.")
+    else:
+        semester_of_study = "2"
+        semester_of_study = p.number_to_words(p.ordinal(semester_of_study)).upper()
+        pass_intro_recommendation_txt = "<b>they proceed to the {} Year of study</b>".format(year_of_study_plus)
+        log_print("This seems to be 2nd Semester.")
+        log_print("All or most of 2nd Semester units were done.")
+    
+    
     doc_title = doc_title.format(university_name, school_of, department_of, course_name, academic_year, year_of_study, semester_of_study)
     
     pass_list_intro = config["pass_list_introduction"]["pass_list_intro_content"]
@@ -367,7 +400,7 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
     supp_num_words = p.number_to_words(supp_num_candidates).capitalize()
 
     # Fill in the template with the actual value
-    pass_list_intro_text = pass_list_intro.format(pass_num_words,pass_num_candidates, school_of, academic_year, year_of_study.capitalize(), semester_of_study.capitalize(), course_name, school_of, year_of_study_plus)
+    pass_list_intro_text = pass_list_intro.format(pass_num_words,pass_num_candidates, school_of, academic_year, year_of_study.capitalize(), semester_of_study.capitalize(), course_name, school_of, pass_intro_recommendation_txt)
     supp_list_intro_text = supp_list_intro.format(supp_num_words, supp_num_candidates, year_of_study.capitalize(), semester_of_study.capitalize() , course_name , academic_year, school_of)
 
     # Add a letterhead as a Paragraph
@@ -470,7 +503,7 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
 
         # Add your pass_content to the PDF
         doc.build( pass_content, onFirstPage=add_centered_page_numbers, onLaterPages=add_centered_page_numbers)
-        print(f"PDF report saved as '{pdf_output_path}'")
+        log_print(f"PDF report saved as '{pdf_output_path}'")
 
 
     generate_pdf_with_centered_page_numbers(pass_list_pdf_output_path, pass_list_pdf_name, pass_content)
@@ -489,13 +522,18 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
     yr_processed = yr_processed.replace(" ", "_")
 
     # Convert the characters in yr_processed to lowercase
-    yr_processed = yr_processed.lower()
+    yr_processed = yr_processed.lower()+"_"
+    # print(semester_of_study)
+    to_numeric_conversions = {"FIRST": "1st", "SECOND": "2nd", "THIRD": "3rd", "FOURTH": "4th"}
+
+    sem_processed = to_numeric_conversions.get(semester_of_study, semester_of_study)+"_sem"
+    # print(sem_processed)
 
     # Split the file extension from general_senate_pdf_path
     base_name, extension = os.path.splitext(general_senate_pdf_path)
 
     # Combine base_name, yr_processed, and the original extension to create output_pdf_file
-    output_pdf_file = f"{base_name}_{yr_processed}{extension}"
+    output_pdf_file = f"{base_name}_{yr_processed}{sem_processed}{extension}"
 
 
 
@@ -568,10 +606,10 @@ def consolidate_mark_sheet(mechatronics_units_path, input_folder_path, consolida
 
 
 
-    print(f"Consolidated mark sheet saved as '{consolidated_excel_output_path}'.")
+    log_print(f"Consolidated mark sheet saved as '{consolidated_excel_output_path}'.")
 
     # Print files without "REG. NO." cell
     if files_without_reg_no:
-        print("Files without 'REG. NO.' cell:")
+        log_print("Files without 'REG. NO.' cell:")
         for file in files_without_reg_no:
-            print(file)
+            log_print(file)

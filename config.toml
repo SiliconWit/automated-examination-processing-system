@@ -24,11 +24,16 @@ path = "data/units/mechatronics_engineering_units.json"
 
 [input_folder]
 # path = "../individual_sheets"
-path = "../individual_sheets2"
+# path = "../individual_sheets2"
+path = "../2.1/sorted"
+
+[running_report]
+path = "../running_report.txt"
 
 [consolidated_excel_output]
 # path = "../EMT4_2_2023.xlsx"
-path = "../EMT2_2_2023.xlsx"
+# path = "../EMT2_2_2023.xlsx"
+path = "../EMT_2.1_2023.xlsx"
 
 [pass_list_pdf_output]
 path = "../pass_list.pdf"
@@ -40,10 +45,11 @@ path = "../supp_list.pdf"
 path = "../senate_doc.pdf" 
 
 [course_patterns]
-# E022 = "^E022-01-\\d+/\\d{4}$" # Mechatronics Engineering 
-E022 = "^E022[-‐]01[-‐]\\d+/\\d{4}$" # Ignore subtle hyphen variations
-# ^(E0[‐-]022|EO[‐-]022)[-‐]01[-‐]\d+/\d{4}$ # o or O and 0 are different!
+E022 = "^E022-01-\\d+/\\d{4}$" # Mechatronics Engineering 
 E023 = "^E023-\\d+-\\d+/\\d{4}$"
+
+# E022 = "^E022[-‐]01[-‐]\\d+/\\d{4}$" # Ignore subtle hyphen variations
+# ^(E0[‐-]022|EO[‐-]022)[-‐]01[-‐]\d+/\d{4}$ # o or O and 0 are different!
 
 # Add more patterns for other courses if needed
 
@@ -58,7 +64,7 @@ department_of = "Mechatronics Engineering"
 course_name = "Bachelor of Science in Mechatronics Engineering"
 academic_year = "2022/2023"
 # year_of_study = "4"
-semester_of_study = "2"
+# semester_of_study = "2"
 
 [document_title]
 document_title = """
@@ -73,8 +79,7 @@ The following <b>{} ({})</b> candidates have satisfied the School of
 {} Board of Examiners in the <b>{}</b> Academic Year, 
 <b>{}</b> Year, <b>{}</b> Semester examination for the degree of 
 {}. The School 
-of {} Board of Examiners recommends that <b>they proceed to 
-the {} Year of study</b>.
+of {} Board of Examiners recommends that {}.
 """
 
 [supp_list_introduction]
