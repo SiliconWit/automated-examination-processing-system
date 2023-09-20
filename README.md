@@ -20,6 +20,8 @@ In summary, Open EProS is a flexible, transparent, and scalable software solutio
 
 ## The Project Organization
 
+![Screenshot from 2023-09-20 11-43-50](https://github.com/SiliconWit/exam-processing-system/assets/14171794/41a465b8-2df5-463d-a6d3-92476779d9b5)
+
 project_folder/
 ├── config.toml                 # Configuration file
 ├── data/                       # Folder for input/output data
@@ -30,4 +32,3 @@ project_folder/
 │   ├── utilities.py            # Shared utilities and constants
 │   └── rule_engine.py          # Rules that generate recommendations 
 └── main.py                     # Main script to run the project
-
