@@ -6,11 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
-# some unwanted data
-# *.csv
+# Some data to exclude 
+*.csv
+*.json
 *.txt
 *.xls
 *.xlsx
+
 
 # Distribution / packaging
 .Python
